@@ -1,0 +1,22 @@
+<launch>
+  <node pkg="my_graspnet_ros" type="grasp_detect.py" name="grasp_detect_node" output="screen">
+    <param name="checkpoint_path" value="$(find my_graspnet_ros)/graspnet_lib/logs/log_rs/checkpoint.tar"/>
+    <param name="num_point" value="20000"/>
+    <param name="num_view" value="300"/>
+    <param name="collision_thresh" value="0.01"/>
+    <param name="voxel_size" value="0.01"/>
+    <param name="data_dir" value="$(find my_graspnet_ros)/doc/graspnet_input1"/>
+
+    <!-- use this if using depth npy file -->
+    <param name="factor_depth" value="1.0"/>
+    <!-- use this if using depth png file -->
+    <!-- <param name="factor_depth" value="1000.0"/>     -->
+
+    <!-- <param name="image_width" value="848.0"/>
+    <param name="image_height" value="480.0"/> -->
+    <param name="image_width" value="640.0"/>
+    <param name="image_height" value="480.0"/>
+    <!-- <param name="image_width" value="1280.0"/>
+    <param name="image_height" value="720.0"/> -->
+  </node>
+</launch>

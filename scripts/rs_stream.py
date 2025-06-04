@@ -17,7 +17,7 @@ def image_callback(msg):
 
 def main():
     global latest_frame
-    rospy.init_node('image_listener', anonymous=True)
+    rospy.init_node('rs_stream_node', anonymous=True)
     rospy.Subscriber('/camera/color/image_raw', Image, image_callback)
 
     rate = rospy.Rate(10)  # 10 Hz
