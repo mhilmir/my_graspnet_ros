@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 
-import rospy
-from sensor_msgs.msg import Image, CameraInfo
-from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import scipy.io as scio
 import os
 import numpy as np
 from ultralytics import YOLO
+### Always import torch and ultralytics before any ROS-related imports
+import rospy
+from sensor_msgs.msg import Image, CameraInfo
+from cv_bridge import CvBridge, CvBridgeError
 
 class MyRealsense:
     def __init__(self):
