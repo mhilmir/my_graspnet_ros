@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(my_graspnet_ros)
 
+set(PYTHON_EXECUTABLE "/home/ysc/miniconda3/envs/robotdog/bin/python")
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
-
-set(PYTHON_EXECUTABLE "/home/ysc/miniconda3/envs/robotdog/bin/python")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -164,7 +164,15 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  scripts/my_demo.py
+  scripts/capture_image.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+catkin_install_python(PROGRAMS
+  scripts/yolo_detect_test.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+catkin_install_python(PROGRAMS
+  scripts/rs_stream.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

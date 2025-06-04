@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="my_graspnet_ros" type="capture_image.py" name="capture_image_node" output="screen">
+        <param name="output_dir" value="$(find my_graspnet_ros)/doc/graspnet_input1" />
+    </node>
+</launch>

@@ -15,9 +15,9 @@ import torch
 from graspnetAPI import GraspGroup
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(ROOT_DIR, 'models'))
-sys.path.append(os.path.join(ROOT_DIR, 'dataset'))
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
+sys.path.append(os.path.join(ROOT_DIR, '../graspnet_lib/models'))
+sys.path.append(os.path.join(ROOT_DIR, '../graspnet_lib/dataset'))
+sys.path.append(os.path.join(ROOT_DIR, '../graspnet_lib/utils'))
 
 from graspnet import GraspNet, pred_decode
 from graspnet_dataset import GraspNetDataset
@@ -120,5 +120,5 @@ def demo(data_dir):
     vis_grasps(gg, cloud)
 
 if __name__=='__main__':
-    data_dir = 'doc/example_data'
+    data_dir = '../doc/example_data'
     demo(data_dir)
