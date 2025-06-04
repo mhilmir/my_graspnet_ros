@@ -38,42 +38,6 @@ def get_net(checkpoint_path, num_view):
     net.eval()
     return net
 
-# def get_and_process_data(data_dir, factor_depth, width, height, num_point):
-#     color = np.array(PILImage.open(os.path.join(data_dir, 'color.png')), dtype=np.float32) / 255.0
-#     depth = np.array(PILImage.open(os.path.join(data_dir, 'depth.png')))
-#     workspace_mask = np.array(PILImage.open(os.path.join(data_dir, 'workspace_mask.png')))
-#     meta = scio.loadmat(os.path.join(data_dir, 'meta.mat'))
-#     intrinsic = meta['intrinsic_matrix']
-
-#     camera = CameraInfo(width, height, intrinsic[0][0], intrinsic[1][1],
-#                         intrinsic[0][2], intrinsic[1][2], factor_depth)
-#     cloud = create_point_cloud_from_depth_image(depth, camera, organized=True)
-
-#     mask = (workspace_mask & (depth > 0))
-#     cloud_masked = cloud[mask]
-#     color_masked = color[mask]
-
-#     if len(cloud_masked) >= num_point:
-#         idxs = np.random.choice(len(cloud_masked), num_point, replace=False)
-#     else:
-#         idxs1 = np.arange(len(cloud_masked))
-#         idxs2 = np.random.choice(len(cloud_masked), num_point - len(cloud_masked), replace=True)
-#         idxs = np.concatenate([idxs1, idxs2], axis=0)
-
-#     cloud_sampled = cloud_masked[idxs]
-#     color_sampled = color_masked[idxs]
-
-#     cloud_o3d = o3d.geometry.PointCloud()
-#     cloud_o3d.points = o3d.utility.Vector3dVector(cloud_masked.astype(np.float32))
-#     cloud_o3d.colors = o3d.utility.Vector3dVector(color_masked.astype(np.float32))
-
-#     cloud_sampled_tensor = torch.from_numpy(cloud_sampled[np.newaxis].astype(np.float32)).to(torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
-#     end_points = {
-#         'point_clouds': cloud_sampled_tensor,
-#         'cloud_colors': color_sampled
-#     }
-#     return end_points, cloud_o3d
-
 def get_and_process_data(data_dir, factor_depth, width, height, num_point):
     # Load color image (normalized to [0, 1])
     # color = np.array(Image.open(os.path.join(data_dir, 'color_ros.png')), dtype=np.float32) / 255.0
