@@ -9,21 +9,28 @@ from ultralytics import YOLO
 import rospy
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
-from std_msgs.msg import Bool
-from geometry_msgs.msg import Point
+from std_msgs.msg import Bool, Float32
+from geometry_msgs.msg import Point, Quaternion, Pose
+from my_graspnet_ros.srv import GraspDetection
 
 class MyRealsense:
     def __init__(self):
-        rospy.init_node('capture_image_node')
+        rospy.init_node('arm_cam_node')
         self.bridge = CvBridge()
 
         self.image_pub = rospy.Publisher('/camera/arm/gripper_cam', Image, queue_size=1)
+        self.yolo_enabled_pub = rospy.Publisher('/yolo_enabled_arm', Bool, queue_size=1)
+        self.grasp_score_pub = rospy.Publisher('/grasp_result/score', Float32, queue_size=1)
+        self.grasp_width_pub = rospy.Publisher('/grasp_result/width', Float32, queue_size=1)
+        self.grasp_height_pub = rospy.Publisher('/grasp_result/height', Float32, queue_size=1)
+        self.grasp_depth_pub = rospy.Publisher('/grasp_result/depth', Float32, queue_size=1)
+        self.grasp_pose_pub = rospy.Publisher('/grasp_result/pose', Pose, queue_size=1)
 
         self.color_msg = rospy.Subscriber('/camera/color/image_raw', Image, self.color_callback)
         self.depth_msg = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.depth_callback)
         self.camera_info_msg = rospy.Subscriber('/camera/aligned_depth_to_color/camera_info', CameraInfo, self.cam_info_callback)
         self.yolo_enabled_sub = rospy.Subscriber("/yolo_enabled_arm", Bool, self.yolo_enabled_callback)
-        # self.mouse_sub = rospy.Subscriber("/camera/arm/mouse_click", Point, self.mouse_callback)
+        self.mouse_sub = rospy.Subscriber("/camera/arm/mouse_click", Point, self.mouse_callback)
 
         self.color_image = None
         self.depth_image = None
@@ -31,8 +38,8 @@ class MyRealsense:
         self.clicked_point = None
         self.yolo_enabled = False  # Flag to control YOLO inference
         
-        cv2.namedWindow("Image Saver Masked Window")
-        cv2.setMouseCallback("Image Saver Masked Window", self.click_event)
+        # cv2.namedWindow("Image Saver Masked Window")
+        # cv2.setMouseCallback("Image Saver Masked Window", self.click_event)
 
         self.bbox = (0, 0, 0, 0)  # Initialize the bounding box
         self.rate = rospy.Rate(30)  # 30 hz
@@ -40,10 +47,10 @@ class MyRealsense:
         self.model = YOLO('yolov8n.pt')
         self.detected_boxes = []
     
-    def click_event(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.clicked_point = (x, y)
-            print("clicked", self.clicked_point)
+    # def click_event(self, event, x, y, flags, param):
+    #     if event == cv2.EVENT_LBUTTONDOWN:
+    #         self.clicked_point = (x, y)
+    #         print("clicked", self.clicked_point)
 
     def color_callback(self, msg):
         try:
@@ -64,9 +71,9 @@ class MyRealsense:
         self.yolo_enabled = msg.data
         rospy.loginfo(f"YOLO enabled: {self.yolo_enabled}")
     
-    # def mouse_callback(self, msg):
-    #     self.clicked_point = msg
-    #     print("clicked\n", self.clicked_point)
+    def mouse_callback(self, msg):
+        self.clicked_point = msg
+        print("clicked\n", self.clicked_point)
 
     def run(self):
         while not rospy.is_shutdown():
@@ -75,7 +82,7 @@ class MyRealsense:
 
             detected_boxes = []
             if self.yolo_enabled:
-                results = self.model(color_image_copy)
+                results = self.model(color_image_copy, verbose=False)
                 for result in results:
                     boxes = result.boxes.xyxy.cpu().numpy()
                     for box in boxes:
@@ -84,9 +91,8 @@ class MyRealsense:
                         cv2.rectangle(color_image_copy, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
             if self.clicked_point:
-                # cx = self.clicked_point.x
-                # cy = self.clicked_point.y
-                cx, cy = self.clicked_point
+                cx = self.clicked_point.x
+                cy = self.clicked_point.y
                 for x1, y1, x2, y2 in detected_boxes:
                     if x1 <= cx <= x2 and y1 <= cy <= y2:
                         self.bbox = (x1, y1, x2 - x1, y2 - y1)
@@ -149,12 +155,32 @@ class MyRealsense:
                 rospy.loginfo(f"Depth image saved to: {depth_path}")
                 rospy.loginfo(f"CameraInfo saved to: {meta_path}")
 
+                # Call detect_grasp service
+                rospy.wait_for_service("detect_grasp")
+                try:
+                    detect_grasp = rospy.ServiceProxy("detect_grasp", GraspDetection)
+                    res = detect_grasp()
+                    print(f"Score: {res.score}")
+                    print(f"Position: {res.position}")
+                    print(f"Quaternion: {res.orientation}")
+
+                    # Publish grasp pose data to related topics
+                    self.grasp_score_pub.publish(Float32(data=res.score))
+                    self.grasp_width_pub.publish(Float32(data=res.width))
+                    self.grasp_height_pub.publish(Float32(data=res.height))
+                    self.grasp_depth_pub.publish(Float32(data=res.depth))
+                    self.grasp_pose_pub.publish(Pose(position=res.position, orientation=res.orientation))
+
+                except rospy.ServiceException as e:
+                    print("Service call failed: %s" % e)
+
                 # break
                 self.bbox = (0, 0, 0, 0)
+                self.yolo_enabled_pub.publish(Bool(data=False))
 
-            # image_msg = self.bridge.cv2_to_imgmsg(color_image_copy, encoding='bgr8')
-            # self.image_pub.publish(image_msg)
-            cv2.imshow("Image Saver Masked Window", color_image_copy)
+            image_msg = self.bridge.cv2_to_imgmsg(color_image_copy, encoding='bgr8')
+            self.image_pub.publish(image_msg)
+            # cv2.imshow("Image Saver Masked Window", color_image_copy)
             # cv2.imshow("depth_img", self.depth_image)
             
             key = cv2.waitKey(1) & 0xFF
