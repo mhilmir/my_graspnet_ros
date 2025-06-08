@@ -5,6 +5,7 @@ import scipy.io as scio
 import os
 import numpy as np
 from ultralytics import YOLO
+import math
 ### Always import torch and ultralytics before any ROS-related imports
 import rospy
 from sensor_msgs.msg import Image, CameraInfo
@@ -25,6 +26,7 @@ class MyRealsense:
         self.grasp_height_pub = rospy.Publisher('/grasp_result/height', Float32, queue_size=1)
         self.grasp_depth_pub = rospy.Publisher('/grasp_result/depth', Float32, queue_size=1)
         self.grasp_pose_pub = rospy.Publisher('/grasp_result/pose', Pose, queue_size=1)
+        self.obj_location_pub = rospy.Publisher('/grasp_obj_location', Point, queue_size=1)
 
         self.color_msg = rospy.Subscriber('/camera/color/image_raw', Image, self.color_callback)
         self.depth_msg = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.depth_callback)
@@ -155,6 +157,12 @@ class MyRealsense:
                 rospy.loginfo(f"Depth image saved to: {depth_path}")
                 rospy.loginfo(f"CameraInfo saved to: {meta_path}")
 
+                # Calculate Object Location based on Camera Frame
+                obj_location_x = x + (w/2)
+                obj_location_y = y + (h/2)
+                raw_depth = masked_depth[int(obj_location_y), int(obj_location_x)]
+                obj_location_z = math.sqrt(raw_depth**2 - (obj_location_x**2 + obj_location_y**2))
+
                 # Call detect_grasp service
                 rospy.wait_for_service("detect_grasp")
                 try:
@@ -170,6 +178,7 @@ class MyRealsense:
                     self.grasp_height_pub.publish(Float32(data=res.height))
                     self.grasp_depth_pub.publish(Float32(data=res.depth))
                     self.grasp_pose_pub.publish(Pose(position=res.position, orientation=res.orientation))
+                    self.obj_location_pub.publish(Point(x=obj_location_x, y=obj_location_y, z=obj_location_z))
 
                 except rospy.ServiceException as e:
                     print("Service call failed: %s" % e)
