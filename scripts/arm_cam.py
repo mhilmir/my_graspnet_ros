@@ -158,8 +158,8 @@ class MyRealsense:
                 rospy.loginfo(f"CameraInfo saved to: {meta_path}")
 
                 # Calculate Object Location based on Camera Frame
-                obj_location_x = x + (w/2)
-                obj_location_y = y + (h/2)
+                obj_location_x = (x + (w/2)) - masked_depth.shape[1]
+                obj_location_y = y + (h/2) - masked_depth.shape[0]
                 raw_depth = masked_depth[int(obj_location_y), int(obj_location_x)]
                 obj_location_z = math.sqrt(raw_depth**2 - (obj_location_x**2 + obj_location_y**2))
 
