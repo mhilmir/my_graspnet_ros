@@ -157,11 +157,14 @@ class MyRealsense:
                 rospy.loginfo(f"Depth image saved to: {depth_path}")
                 rospy.loginfo(f"CameraInfo saved to: {meta_path}")
 
-                # Calculate Object Location based on Camera Frame
-                obj_location_x = (x + (w/2)) - masked_depth.shape[1]
-                obj_location_y = y + (h/2) - masked_depth.shape[0]
-                raw_depth = masked_depth[int(obj_location_y), int(obj_location_x)]
-                obj_location_z = math.sqrt(raw_depth**2 - (obj_location_x**2 + obj_location_y**2))
+                # # Calculate Object Location based on Camera Frame
+                # obj_location_x = (x + (w/2)) - (masked_depth.shape[1]/2)
+                # obj_location_y = (y + (h/2)) - (masked_depth.shape[0]/2)
+                # raw_depth = masked_depth[int(obj_location_y), int(obj_location_x)]
+                # print("obj_location_x : ", obj_location_x)
+                # print("obj_location_y : ", obj_location_y)
+                # print("raw depth : ", raw_depth)
+                # obj_location_z = math.sqrt(raw_depth**2 - (obj_location_x**2 + obj_location_y**2))
 
                 # Call detect_grasp service
                 rospy.wait_for_service("detect_grasp")
@@ -178,7 +181,7 @@ class MyRealsense:
                     self.grasp_height_pub.publish(Float32(data=res.height))
                     self.grasp_depth_pub.publish(Float32(data=res.depth))
                     self.grasp_pose_pub.publish(Pose(position=res.position, orientation=res.orientation))
-                    self.obj_location_pub.publish(Point(x=obj_location_x, y=obj_location_y, z=obj_location_z))
+                    # self.obj_location_pub.publish(Point(x=obj_location_x, y=obj_location_y, z=obj_location_z))
 
                 except rospy.ServiceException as e:
                     print("Service call failed: %s" % e)
