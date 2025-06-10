@@ -91,6 +91,13 @@ def collision_detection(gg, cloud_np, voxel_size, thresh):
     collision_mask = mfcdetector.detect(gg, approach_dist=0.05, collision_thresh=thresh)
     return gg[~collision_mask]
 
+def vis_grasps(gg, cloud):
+    gg.nms()
+    gg.sort_by_score()
+    gg = gg[:50]
+    grippers = gg.to_open3d_geometry_list()
+    o3d.visualization.draw_geometries([cloud, *grippers])
+
 def handle_grasp_detection(req):
     try:
         end_points, cloud = get_and_process_data(data_dir, factor_depth, image_width, image_height, num_point)
@@ -105,6 +112,9 @@ def handle_grasp_detection(req):
         # print(g)
         # print(dir(g))
 
+        # vis_grasps(gg, cloud)
+        vis_grasps(gg[:1], cloud)  # only draw the first index, which sent as a response
+
         # Convert rotation matrix to quaternion
         rot_matrix = np.eye(4)
         rot_matrix[:3, :3] = g.rotation_matrix
@@ -115,7 +125,6 @@ def handle_grasp_detection(req):
         res.width = g.width
         res.height = g.height
         res.depth = g.depth
-
         res.position = Point(x=g.translation[0], y=g.translation[1], z=g.translation[2])
         res.orientation = Quaternion(x=quat[0], y=quat[1], z=quat[2], w=quat[3])
 

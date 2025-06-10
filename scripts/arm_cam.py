@@ -172,6 +172,9 @@ class MyRealsense:
                     detect_grasp = rospy.ServiceProxy("detect_grasp", GraspDetection)
                     res = detect_grasp()
                     print(f"Score: {res.score}")
+                    print(f"Width: {res.width}")
+                    print(f"Height: {res.height}")
+                    print(f"Depth: {res.depth}")
                     print(f"Position: {res.position}")
                     print(f"Quaternion: {res.orientation}")
 
