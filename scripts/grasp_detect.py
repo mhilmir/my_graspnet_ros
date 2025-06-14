@@ -6,11 +6,11 @@ import rospy
 import numpy as np
 import open3d as o3d
 import scipy.io as scio
+from scipy.spatial.transform import Rotation as R
 from PIL import Image as PILImage
 
 import torch
 from graspnetAPI import GraspGroup
-from graspnetAPI.grasp import Grasp
 
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -111,55 +111,9 @@ def vis_grasps(gg, cloud):
     gg.nms()
     gg.sort_by_score()
     gg = gg[:5]
-    print(gg[0])
+    # print(gg[0])
     grippers = gg.to_open3d_geometry_list()
     o3d.visualization.draw_geometries([cloud, *grippers])
-
-def rpy_to_rotation_matrix(roll, pitch, yaw):
-    """Create a rotation matrix from roll, pitch, yaw (Z-Y-X convention)"""
-    Rx = np.array([
-        [1, 0, 0],
-        [0, np.cos(roll), -np.sin(roll)],
-        [0, np.sin(roll),  np.cos(roll)]
-    ])
-
-    Ry = np.array([
-        [np.cos(pitch), 0, np.sin(pitch)],
-        [0, 1, 0],
-        [-np.sin(pitch), 0, np.cos(pitch)]
-    ])
-
-    Rz = np.array([
-        [np.cos(yaw), -np.sin(yaw), 0],
-        [np.sin(yaw),  np.cos(yaw), 0],
-        [0, 0, 1]
-    ])
-
-    return Rz @ Ry @ Rx  # ZYX order
-
-def rotate_grasp_rotation_matrix(grasp_rotation_matrix, roll=0, pitch=0, yaw=0, local=True):
-    """
-    Rotate a 3x3 grasp rotation matrix with roll, pitch, yaw angles (in radians).
-    - If local=True: rotates in the local object frame (post-multiplication)
-    - If local=False: rotates in the world/global frame (pre-multiplication)
-    """
-    R_rpy = rpy_to_rotation_matrix(roll, pitch, yaw)
-    if local:
-        return grasp_rotation_matrix @ R_rpy
-    else:
-        return R_rpy @ grasp_rotation_matrix
-
-def update_grasp_rotation(grasp: Grasp, roll, pitch, yaw, local=True):
-    # Get original rotation matrix
-    R_orig = grasp.rotation_matrix  # shape (3, 3)
-    R_new = rotate_grasp_rotation_matrix(R_orig, roll, pitch, yaw, local=local)
-    R_flat = R_new.flatten()
-
-    # Copy original grasp array and replace the rotation part
-    new_grasp_array = grasp.grasp_array.copy()
-    new_grasp_array[:9] = R_flat  # Assuming first 9 elements are rotation
-
-    return Grasp(new_grasp_array)
 
 def main():
     rospy.init_node("grasp_detect_node", anonymous=True)
@@ -189,36 +143,40 @@ def main():
         rospy.loginfo("Performing collision detection...")
         gg = collision_detection(gg, np.array(cloud.points), voxel_size, collision_thresh)
 
+    gg.nms()
+    gg.sort_by_score()
+    
     rospy.loginfo("Visualizing grasps...")
     vis_grasps(gg, cloud)
 
-    # PERCOBAAN MEROTASI GRASPING POSE
-    gg.nms()
-    gg.sort_by_score()
-    # g = gg[0]
 
-    # print(type(gg[0]))
-    # print(dir(gg[0]))
-    print(gg[0].grasp_array.shape)  # should print (12,)
+    # PERCOBAAN MEROTASI GRASPING POSE
+
+    # gg.grasp_group_array[i, 0:4] for [score, width, height, depth]
+    # gg.grasp_group_array[i, 4:13] for flattened 3x3 rotation matrix
+    # gg.grasp_group_array[i, 13:16] for translation
+    # gg.grasp_group_array[i, 16:] for object id
 
     rospy.loginfo("Visualizing grasps..., [BEFORE rotation]")
-    # vis_grasps(gg[:1], cloud)
+    vis_grasps(gg[:1], cloud)
     print(gg[0].rotation_matrix)
 
-    # Apply a 30-degree roll
-    roll = 0
-    pitch = np.radians(90)
-    yaw = np.radians(90)
-    # Rotate
-    # gg[0].rotation_matrix = rotate_grasp_rotation_matrix(gg[0].rotation_matrix, roll, pitch, yaw, local=True)
-    # result = rotate_grasp_rotation_matrix(gg[0].rotation_matrix, roll, pitch, yaw, local=True)
-    gg.grasp_group[0] = update_grasp_rotation(gg.grasp_group[0], roll, pitch, yaw, local=True)
+    # set roll pitch yaw as target value
+    rpy = [0.0, -1.57, 1.569262]  # target orientation
+    rot_matrix = R.from_euler('xyz', rpy).as_matrix()
+    gg.grasp_group_array[0, 4:13] = rot_matrix.flatten()
+
+    # # set roll pitch yaw as addition value
+    # delta_rpy = np.radians([0, 0, 30])  # rotate 30° more in yaw
+    # delta_rot = R.from_euler('xyz', delta_rpy).as_matrix()
+    # original_rot = gg.grasp_group_array[0, 4:13].reshape(3, 3)
+    # # Apply delta rotation in local frame
+    # new_rot = delta_rot @ original_rot
+    # gg.grasp_group_array[0, 4:13] = new_rot.flatten()
 
     rospy.loginfo("Visualizing grasps..., [AFTER rotation]")
-    # vis_grasps(gg[:1], cloud)
+    vis_grasps(gg[:1], cloud)
     print(gg[0].rotation_matrix)
-    # print(result)
-
 
 if __name__ == '__main__':
     try:

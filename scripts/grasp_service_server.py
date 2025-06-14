@@ -6,6 +6,7 @@ import rospy
 import numpy as np
 import torch
 import scipy.io as scio
+from scipy.spatial.transform import Rotation as R
 import open3d as o3d
 from PIL import Image as PILImage
 from geometry_msgs.msg import Point, Quaternion
@@ -108,12 +109,19 @@ def handle_grasp_detection(req):
 
         gg.nms()
         gg.sort_by_score()
+
+        # Rotate The Rotation Matrix (set roll pitch yaw as target value)
+        rpy = [0.0, -1.57, 1.569262]  # target orientation
+        rot_matrix = R.from_euler('xyz', rpy).as_matrix()
+        gg.grasp_group_array[0, 4:13] = rot_matrix.flatten()  # for grasp index 0 only
+
+        # vis_grasps(gg, cloud)
+        vis_grasps(gg[:1], cloud)  # only draw index 0, which sent as a response
+
+        # take only the grasp index 0
         g = gg[0]
         # print(g)
         # print(dir(g))
-
-        # vis_grasps(gg, cloud)
-        vis_grasps(gg[:1], cloud)  # only draw the first index, which sent as a response
 
         # Convert rotation matrix to quaternion
         rot_matrix = np.eye(4)
