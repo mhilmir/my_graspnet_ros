@@ -26,7 +26,7 @@ class MyRealsense:
         self.grasp_height_pub = rospy.Publisher('/grasp_result/height', Float32, queue_size=1)
         self.grasp_depth_pub = rospy.Publisher('/grasp_result/depth', Float32, queue_size=1)
         self.grasp_pose_pub = rospy.Publisher('/grasp_result/pose', Pose, queue_size=1)
-        self.obj_location_pub = rospy.Publisher('/grasp_obj_location', Point, queue_size=1)
+        self.bbox_real_pub = rospy.Publisher('/bbox_real', Point, queue_size=1)
 
         self.color_msg = rospy.Subscriber('/camera/color/image_raw', Image, self.color_callback)
         self.depth_msg = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.depth_callback)
@@ -76,6 +76,44 @@ class MyRealsense:
     def mouse_callback(self, msg):
         self.clicked_point = msg
         print("clicked\n", self.clicked_point)
+
+    def pixel_to_real_world_coordinates(x_pixel, y_pixel, raw_depth_mm, intrinsic_matrix):
+        """
+        Converts 2D pixel coordinates (x, y) from a Realsense D435i frame
+        to real-world (X, Y, Z) distances in meters.
+
+        Args:
+            x_pixel (int): The x-coordinate of the pixel.
+            y_pixel (int): The y-coordinate of the pixel.
+            raw_depth_mm (int or float): The raw depth value at the given pixel from the depth frame,
+                                        expected to be in millimeters (mm).
+            intrinsic_matrix (np.array): The camera's intrinsic matrix, typically 3x3.
+                                        Example: [[fx, 0, cx], [0, fy, cy], [0, 0, 1]]
+
+        Returns:
+            tuple: A tuple (X, Y, Z) representing the real-world coordinates in meters.
+                X: Real-world X-coordinate (horizontal)
+                Y: Real-world Y-coordinate (vertical)
+                Z: Real-world Z-coordinate (depth)
+        """
+
+        fx = intrinsic_matrix[0, 0]
+        fy = intrinsic_matrix[1, 1]
+        cx = intrinsic_matrix[0, 2]
+        cy = intrinsic_matrix[1, 2]
+
+        # Convert raw depth from millimeters to meters
+        Z_meters = raw_depth_mm / 1000.0
+
+        # Convert pixel coordinates to normalized image plane coordinates
+        x_normalized = (x_pixel - cx) / fx
+        y_normalized = (y_pixel - cy) / fy
+
+        # Scale by depth to get real-world X and Y in meters
+        X_meters = x_normalized * Z_meters
+        Y_meters = y_normalized * Z_meters
+
+        return X_meters, Y_meters, Z_meters
 
     def run(self):
         while not rospy.is_shutdown():
@@ -157,14 +195,21 @@ class MyRealsense:
                 rospy.loginfo(f"Depth image saved to: {depth_path}")
                 rospy.loginfo(f"CameraInfo saved to: {meta_path}")
 
-                # # Calculate Object Location based on Camera Frame
-                # obj_location_x = (x + (w/2)) - (masked_depth.shape[1]/2)
-                # obj_location_y = (y + (h/2)) - (masked_depth.shape[0]/2)
-                # raw_depth = masked_depth[int(obj_location_y), int(obj_location_x)]
-                # print("obj_location_x : ", obj_location_x)
-                # print("obj_location_y : ", obj_location_y)
-                # print("raw depth : ", raw_depth)
-                # obj_location_z = math.sqrt(raw_depth**2 - (obj_location_x**2 + obj_location_y**2))
+                # Calculate Object Location based on Camera Frame
+                intrinsic_matrix = np.array([
+                    [fx, 0,  cx],
+                    [0,  fy, cy],
+                    [0,  0,  1]
+                ], dtype=np.float32)
+                cbbox_pixel_x = x + (w/2)
+                cbbox_pixel_y = y + (h/2)
+                raw_depth = masked_depth[int(cbbox_pixel_y), int(cbbox_pixel_x)]
+                cbbox_real_x, cbbox_real_y, cbbox_real_z = self.pixel_to_real_world_coordinates(
+                    cbbox_pixel_x, cbbox_pixel_y, raw_depth,
+                    intrinsic_matrix
+                )
+                print(f"BB Pixel ({cbbox_pixel_x}, {cbbox_pixel_y}) with raw depth {raw_depth} mm:")
+                print(f"BB Real-world coordinates (X, Y, Z): ({cbbox_real_x:.4f} m, {cbbox_real_y:.4f} m, {cbbox_real_z:.4f} m)")
 
                 # Call detect_grasp service
                 rospy.wait_for_service("detect_grasp")
@@ -184,7 +229,7 @@ class MyRealsense:
                     self.grasp_height_pub.publish(Float32(data=res.height))
                     self.grasp_depth_pub.publish(Float32(data=res.depth))
                     self.grasp_pose_pub.publish(Pose(position=res.position, orientation=res.orientation))
-                    # self.obj_location_pub.publish(Point(x=obj_location_x, y=obj_location_y, z=obj_location_z))
+                    self.bbox_real_pub.publish(Point(x=cbbox_real_x, y=cbbox_real_y, z=cbbox_real_z))
 
                 except rospy.ServiceException as e:
                     print("Service call failed: %s" % e)
