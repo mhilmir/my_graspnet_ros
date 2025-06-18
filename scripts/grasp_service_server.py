@@ -5,6 +5,7 @@ import sys
 import rospy
 import numpy as np
 import torch
+import math
 import scipy.io as scio
 from scipy.spatial.transform import Rotation as R
 import open3d as o3d
@@ -99,6 +100,25 @@ def vis_grasps(gg, cloud):
     grippers = gg.to_open3d_geometry_list()
     o3d.visualization.draw_geometries([cloud, *grippers])
 
+def sort_grasp_group_by_distance(grasp_group, target_point):
+    if len(grasp_group) == 0:
+        return GraspGroup()
+    try:
+        grasp_array = grasp_group.grasp_group_array
+    except AttributeError:
+        print("[ERROR] Could not access grasp_group.grasp_group_array.")
+        return GraspGroup()
+    
+    # Use the confirmed correct slice for translation data
+    translations = grasp_array[:, 13:16]
+    
+    target_np = np.array(target_point)
+    distances = np.linalg.norm(translations - target_np, axis=1)
+    sorted_indices = np.argsort(distances)
+    sorted_grasp_array = grasp_array[sorted_indices]
+    sorted_grasp_group = GraspGroup(sorted_grasp_array)
+    return sorted_grasp_group
+    
 def handle_grasp_detection(req):
     try:
         # print(f"BB Real-world coordinates (X, Y, Z): ({req.bbox_real_pos.x:.4f} m, {req.bbox_real_pos.y:.4f} m, {req.bbox_real_pos.z:.4f} m)")
@@ -113,6 +133,10 @@ def handle_grasp_detection(req):
         gg.sort_by_score()
         gg = gg[:50]
 
+        # sort by distance from bbox center point
+        bbox_ref_point = (req.bbox_real_pos.x, req.bbox_real_pos.y, req.bbox_real_pos.z)
+        gg = sort_grasp_group_by_distance(gg, bbox_ref_point)
+
         # gg.grasp_group_array[i, 0:4] for [score, width, height, depth]
         # gg.grasp_group_array[i, 4:13] for flattened 3x3 rotation matrix
         # gg.grasp_group_array[i, 13:16] for translation
@@ -123,8 +147,8 @@ def handle_grasp_detection(req):
         rot_matrix = R.from_euler('xyz', rpy).as_matrix()
         gg.grasp_group_array[0, 4:13] = rot_matrix.flatten()  # for grasp index 0 only
 
-        # Replace tranlation xyz (kalo pake cara ini sebenere data hasil graspnet nya ga kepake samsek hehe)
-        gg.grasp_group_array[0, 13:16] = [req.bbox_real_pos.x, req.bbox_real_pos.y, req.bbox_real_pos.z]
+        # # Replace tranlation xyz (kalo pake cara ini sebenere data hasil graspnet nya ga kepake samsek hehe)
+        # gg.grasp_group_array[0, 13:16] = [req.bbox_real_pos.x, req.bbox_real_pos.y, req.bbox_real_pos.z]
 
         # vis_grasps(gg, cloud)
         vis_grasps(gg[:1], cloud)  # only draw index 0, which sent as a response
