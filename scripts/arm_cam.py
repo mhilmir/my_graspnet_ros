@@ -11,7 +11,7 @@ import rospy
 from sensor_msgs.msg import Image, CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 from std_msgs.msg import Bool, Float32
-from geometry_msgs.msg import Point, Quaternion, Pose
+from geometry_msgs.msg import Point, Quaternion, Pose, PolygonStamped
 from my_graspnet_ros.srv import GraspDetection
 
 class MyRealsense:
@@ -33,12 +33,14 @@ class MyRealsense:
         self.camera_info_msg = rospy.Subscriber('/camera/aligned_depth_to_color/camera_info', CameraInfo, self.cam_info_callback)
         self.yolo_enabled_sub = rospy.Subscriber("/yolo_enabled_arm", Bool, self.yolo_enabled_callback)
         self.mouse_sub = rospy.Subscriber("/camera/arm/mouse_click", Point, self.mouse_callback)
+        self.drag_sub = rospy.Subscriber("/camera/arm/drag_bbox", PolygonStamped, self.drag_callback)
 
         self.color_image = None
         self.depth_image = None
         self.camera_matrix = None
         self.clicked_point = None
         self.yolo_enabled = False  # Flag to control YOLO inference
+        self.drag_bbox = None
         
         # cv2.namedWindow("Image Saver Masked Window")
         # cv2.setMouseCallback("Image Saver Masked Window", self.click_event)
@@ -75,7 +77,11 @@ class MyRealsense:
     
     def mouse_callback(self, msg):
         self.clicked_point = msg
-        print("clicked\n", self.clicked_point)
+        # print("clicked\n", self.clicked_point)
+
+    def drag_callback(self, msg):
+        self.drag_bbox = msg
+        # print("got bbox\n", self.drag_bbox)
 
     def pixel_to_real_world_coordinates(self, x_pixel, y_pixel, raw_depth_mm, intrinsic_matrix):
         """
@@ -138,6 +144,12 @@ class MyRealsense:
                         self.bbox = (x1, y1, x2 - x1, y2 - y1)
                         break
                 self.clicked_point = None
+            
+            if self.drag_bbox:
+                top_left = self.drag_bbox.polygon.points[0]
+                bottom_right = self.drag_bbox.polygon.points[2]
+                self.bbox = (int(top_left.x), int(top_left.y), int(bottom_right.x-top_left.x), int(bottom_right.y-top_left.y))
+                self.drag_bbox = None
 
             if self.bbox != (0, 0, 0, 0):
                 x, y, w, h = self.bbox
