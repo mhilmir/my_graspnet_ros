@@ -77,7 +77,7 @@ class MyRealsense:
         self.clicked_point = msg
         print("clicked\n", self.clicked_point)
 
-    def pixel_to_real_world_coordinates(x_pixel, y_pixel, raw_depth_mm, intrinsic_matrix):
+    def pixel_to_real_world_coordinates(self, x_pixel, y_pixel, raw_depth_mm, intrinsic_matrix):
         """
         Converts 2D pixel coordinates (x, y) from a Realsense D435i frame
         to real-world (X, Y, Z) distances in meters.
@@ -208,7 +208,8 @@ class MyRealsense:
                     cbbox_pixel_x, cbbox_pixel_y, raw_depth,
                     intrinsic_matrix
                 )
-                print(f"BB Pixel ({cbbox_pixel_x}, {cbbox_pixel_y}) with raw depth {raw_depth} mm:")
+                cbbox_real_z = cbbox_real_z + 0.01  # kasi offset 1cm biar graspingnya lebih dalem
+                # print(f"BB Pixel ({cbbox_pixel_x}, {cbbox_pixel_y}) with raw depth {raw_depth} mm:")
                 print(f"BB Real-world coordinates (X, Y, Z): ({cbbox_real_x:.4f} m, {cbbox_real_y:.4f} m, {cbbox_real_z:.4f} m)")
 
                 # Call detect_grasp service

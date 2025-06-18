@@ -93,15 +93,15 @@ def collision_detection(gg, cloud_np, voxel_size, thresh):
     return gg[~collision_mask]
 
 def vis_grasps(gg, cloud):
-    gg.nms()
-    gg.sort_by_score()
-    gg = gg[:50]
+    # gg.nms()
+    # gg.sort_by_score()
+    # gg = gg[:50]
     grippers = gg.to_open3d_geometry_list()
     o3d.visualization.draw_geometries([cloud, *grippers])
 
 def handle_grasp_detection(req):
     try:
-        print(f"BB Real-world coordinates (X, Y, Z): ({req.bbox_real_pos.x:.4f} m, {req.bbox_real_pos.y:.4f} m, {req.bbox_real_pos.z:.4f} m)")
+        # print(f"BB Real-world coordinates (X, Y, Z): ({req.bbox_real_pos.x:.4f} m, {req.bbox_real_pos.y:.4f} m, {req.bbox_real_pos.z:.4f} m)")
 
         end_points, cloud = get_and_process_data(data_dir, factor_depth, image_width, image_height, num_point)
         gg = get_grasps(net, end_points)
@@ -111,11 +111,20 @@ def handle_grasp_detection(req):
 
         gg.nms()
         gg.sort_by_score()
+        gg = gg[:50]
+
+        # gg.grasp_group_array[i, 0:4] for [score, width, height, depth]
+        # gg.grasp_group_array[i, 4:13] for flattened 3x3 rotation matrix
+        # gg.grasp_group_array[i, 13:16] for translation
+        # gg.grasp_group_array[i, 16:] for object id
 
         # Rotate The Rotation Matrix (set roll pitch yaw as target value)
         rpy = [0.0, -1.57, 1.569262]  # target orientation
         rot_matrix = R.from_euler('xyz', rpy).as_matrix()
         gg.grasp_group_array[0, 4:13] = rot_matrix.flatten()  # for grasp index 0 only
+
+        # Replace tranlation xyz (kalo pake cara ini sebenere data hasil graspnet nya ga kepake samsek hehe)
+        gg.grasp_group_array[0, 13:16] = [req.bbox_real_pos.x, req.bbox_real_pos.y, req.bbox_real_pos.z]
 
         # vis_grasps(gg, cloud)
         vis_grasps(gg[:1], cloud)  # only draw index 0, which sent as a response
@@ -138,6 +147,7 @@ def handle_grasp_detection(req):
         res.position = Point(x=g.translation[0], y=g.translation[1], z=g.translation[2])
         res.orientation = Quaternion(x=quat[0], y=quat[1], z=quat[2], w=quat[3])
 
+        print("detect_grasp service succeed\n")
         return res
     except Exception as e:
         rospy.logerr(f"Grasp detection failed: {e}")
