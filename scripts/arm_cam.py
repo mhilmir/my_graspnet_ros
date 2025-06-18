@@ -26,7 +26,7 @@ class MyRealsense:
         self.grasp_height_pub = rospy.Publisher('/grasp_result/height', Float32, queue_size=1)
         self.grasp_depth_pub = rospy.Publisher('/grasp_result/depth', Float32, queue_size=1)
         self.grasp_pose_pub = rospy.Publisher('/grasp_result/pose', Pose, queue_size=1)
-        self.bbox_real_pub = rospy.Publisher('/bbox_real', Point, queue_size=1)
+        # self.bbox_real_pub = rospy.Publisher('/bbox_real', Point, queue_size=1)
 
         self.color_msg = rospy.Subscriber('/camera/color/image_raw', Image, self.color_callback)
         self.depth_msg = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.depth_callback)
@@ -215,7 +215,7 @@ class MyRealsense:
                 rospy.wait_for_service("detect_grasp")
                 try:
                     detect_grasp = rospy.ServiceProxy("detect_grasp", GraspDetection)
-                    res = detect_grasp()
+                    res = detect_grasp(Point(x=cbbox_real_x, y=cbbox_real_y, z=cbbox_real_z))
                     print(f"Score: {res.score}")
                     print(f"Width: {res.width}")
                     print(f"Height: {res.height}")
@@ -229,7 +229,7 @@ class MyRealsense:
                     self.grasp_height_pub.publish(Float32(data=res.height))
                     self.grasp_depth_pub.publish(Float32(data=res.depth))
                     self.grasp_pose_pub.publish(Pose(position=res.position, orientation=res.orientation))
-                    self.bbox_real_pub.publish(Point(x=cbbox_real_x, y=cbbox_real_y, z=cbbox_real_z))
+                    # self.bbox_real_pub.publish(Point(x=cbbox_real_x, y=cbbox_real_y, z=cbbox_real_z))
 
                 except rospy.ServiceException as e:
                     print("Service call failed: %s" % e)

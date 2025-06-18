@@ -1,4 +1,6 @@
 # Request
+geometry_msgs/Point bbox_real_pos
+
 ---
 
 # Response

@@ -101,6 +101,8 @@ def vis_grasps(gg, cloud):
 
 def handle_grasp_detection(req):
     try:
+        print(f"BB Real-world coordinates (X, Y, Z): ({req.bbox_real_pos.x:.4f} m, {req.bbox_real_pos.y:.4f} m, {req.bbox_real_pos.z:.4f} m)")
+
         end_points, cloud = get_and_process_data(data_dir, factor_depth, image_width, image_height, num_point)
         gg = get_grasps(net, end_points)
 
