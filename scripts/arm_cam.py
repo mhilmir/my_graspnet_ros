@@ -28,9 +28,9 @@ class MyRealsense:
         self.grasp_pose_pub = rospy.Publisher('/grasp_result/pose', Pose, queue_size=1)
         # self.bbox_real_pub = rospy.Publisher('/bbox_real', Point, queue_size=1)
 
-        self.color_msg = rospy.Subscriber('/camera/color/image_raw', Image, self.color_callback)
-        self.depth_msg = rospy.Subscriber("/camera/aligned_depth_to_color/image_raw", Image, self.depth_callback)
-        self.camera_info_msg = rospy.Subscriber('/camera/aligned_depth_to_color/camera_info', CameraInfo, self.cam_info_callback)
+        self.color_msg = rospy.Subscriber('/rs_grippercam/color/image_raw', Image, self.color_callback)
+        self.depth_msg = rospy.Subscriber("/rs_grippercam/aligned_depth_to_color/image_raw", Image, self.depth_callback)
+        self.camera_info_msg = rospy.Subscriber('/rs_grippercam/aligned_depth_to_color/camera_info', CameraInfo, self.cam_info_callback)
         self.yolo_enabled_sub = rospy.Subscriber("/yolo_enabled_arm", Bool, self.yolo_enabled_callback)
         self.mouse_sub = rospy.Subscriber("/camera/arm/mouse_click", Point, self.mouse_callback)
         self.drag_sub = rospy.Subscriber("/camera/arm/drag_bbox", PolygonStamped, self.drag_callback)
