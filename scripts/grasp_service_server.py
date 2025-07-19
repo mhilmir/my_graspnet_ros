@@ -155,7 +155,7 @@ def handle_grasp_detection(req):
 
         # take only the grasp index 0
         g = gg[0]
-        # print(g)
+        print(g)
         # print(dir(g))
 
         # Convert rotation matrix to quaternion
@@ -168,7 +168,8 @@ def handle_grasp_detection(req):
         res.width = g.width
         res.height = g.height
         res.depth = g.depth
-        res.position = Point(x=g.translation[0], y=g.translation[1], z=g.translation[2])
+        res.position = Point(x=g.translation[0], y=g.translation[1], z=g.translation[2]+0.01)  # offset z 1cm biar grasp nya tambah dalem
+        # res.position = Point(x=g.translation[0], y=g.translation[1], z=g.translation[2])
         res.orientation = Quaternion(x=quat[0], y=quat[1], z=quat[2], w=quat[3])
 
         print("detect_grasp service succeed\n")

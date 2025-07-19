@@ -220,7 +220,7 @@ class MyRealsense:
                     cbbox_pixel_x, cbbox_pixel_y, raw_depth,
                     intrinsic_matrix
                 )
-                cbbox_real_z = cbbox_real_z + 0.01  # kasi offset 1cm biar graspingnya lebih dalem
+                # cbbox_real_z = cbbox_real_z + 0.01  # kasi offset 1cm biar graspingnya lebih dalem
                 # print(f"BB Pixel ({cbbox_pixel_x}, {cbbox_pixel_y}) with raw depth {raw_depth} mm:")
                 print(f"BB Real-world coordinates (X, Y, Z): ({cbbox_real_x:.4f} m, {cbbox_real_y:.4f} m, {cbbox_real_z:.4f} m)")
 
