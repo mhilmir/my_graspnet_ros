@@ -54,16 +54,17 @@ class YoloDetector:
         start_time = time.time()
 
         # Run inference
-        results = self.model(self.latest_frame, conf=self.confidence_threshold, verbose=False)
+        results = self.model(self.latest_frame, conf=self.confidence_threshold, verbose=True)
 
         fps = 1.0 / (time.time() - start_time)
 
         # Draw results
         result_frame = results[0].plot()
 
-        # Add FPS counter
-        cv2.putText(result_frame, f"FPS: {fps:.1f}", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        # # Add FPS counter
+        # cv2.putText(result_frame, f"FPS: {fps:.1f}", (10, 30),
+        #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        print(f"fps: {fps:.1f}")
 
         return result_frame
 

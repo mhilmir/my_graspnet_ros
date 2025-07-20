@@ -42,6 +42,27 @@ class FastSAMSegmenter:
         except Exception as e:
             rospy.logerr(f"Image conversion failed: {e}")
 
+    # def run_segmentation(self):
+    #     if self.latest_frame is None:
+    #         return None
+
+    #     frame = self.latest_frame.copy()
+    #     start_time = time.time()
+
+    #     # Run segmentation
+    #     results = self.model(frame, device='cuda' if torch.cuda.is_available() else 'cpu', verbose=True)
+
+    #     # Plot the first result (there should only be one for a single frame)
+    #     # annotated_image = results[0].plot(mask_alpha=0.4)
+    #     annotated_image = results[0].plot()
+
+    #     fps = 1.0 / (time.time() - start_time)
+    #     # cv2.putText(annotated_image, f"FPS: {fps:.1f}", (10, 30),
+    #     #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+    #     print(f"fps: {fps:.1f}")
+
+    #     return annotated_image
+            
     def run_segmentation(self):
         if self.latest_frame is None:
             return None
@@ -49,16 +70,35 @@ class FastSAMSegmenter:
         frame = self.latest_frame.copy()
         start_time = time.time()
 
-        # Run segmentation
-        results = self.model(frame, device='cuda' if torch.cuda.is_available() else 'cpu', verbose=False)
+        # Run FastSAM inference
+        results = self.model(
+            frame, device='cuda' if torch.cuda.is_available() else 'cpu', verbose=True
+        )
 
-        # Plot the first result (there should only be one for a single frame)
-        # annotated_image = results[0].plot(mask_alpha=0.4)
-        annotated_image = results[0].plot()
+        # Get masks and filter by area
+        if hasattr(results[0], 'masks') and results[0].masks is not None:
+            masks = results[0].masks.data  # Shape: [N, H, W]
+            min_area = 200   # minimum pixel count
+            max_area = 100000 # maximum pixel count
+
+            filtered_masks = []
+            for mask in masks:
+                area = mask.sum().item()
+                if min_area <= area <= max_area:
+                    filtered_masks.append(mask.cpu().numpy().astype(np.uint8))
+
+            # Overlay filtered masks on the frame
+            color_mask = np.zeros_like(frame)
+            for mask in filtered_masks:
+                color_mask[mask == 1] = (0, 255, 0)  # Green
+
+            annotated_image = cv2.addWeighted(frame, 1.0, color_mask, 0.4, 0)
+        else:
+            rospy.logwarn("No masks found in FastSAM results")
+            annotated_image = frame
 
         fps = 1.0 / (time.time() - start_time)
-        cv2.putText(annotated_image, f"FPS: {fps:.1f}", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        print(f"fps: {fps:.1f}")
 
         return annotated_image
 
