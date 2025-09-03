@@ -1,5 +1,0 @@
-<launch>
-    <node pkg="my_graspnet_ros" type="arm_cam.py" name="arm_cam_node" output="screen">
-        <param name="output_dir" value="$(find my_graspnet_ros)/doc/graspnet_input" />
-    </node>
-</launch>

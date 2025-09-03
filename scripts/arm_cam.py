@@ -165,7 +165,7 @@ class MyRealsense:
                 cy = self.camera_matrix.K[5]
 
                 # Create output directory if not exists
-                output_dir = rospy.get_param('~output_dir', '/tmp/ros_images')
+                output_dir = rospy.get_param('~output_dir', "/home/ysc/lite_cog/camera/src/my_graspnet_ros/doc/graspnet_input")
                 os.makedirs(output_dir, exist_ok=True)
 
                 # Save images

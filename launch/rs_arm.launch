@@ -1,7 +1,7 @@
 <launch>
-  <arg name="serial_no"           default=""/>
+  <arg name="serial_no"           default="215322078611"/>
   <arg name="usb_port_id"         default=""/>
-  <arg name="device_type"         default="d435i"/>
+  <arg name="device_type"         default=""/>
   <arg name="json_file_path"      default=""/>
   <arg name="camera"              default="rs_grippercam"/>
   <arg name="tf_prefix"           default="$(arg camera)"/>

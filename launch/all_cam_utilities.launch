@@ -1,0 +1,6 @@
+<launch>
+    <include file="$(find my_graspnet_ros)/launch/grasp_service_server.launch" />
+    <include file="$(find my_graspnet_ros)/launch/rs_arm.launch" />
+
+    <node pkg="my_graspnet_ros" type="arm_cam.py" name="arm_cam_node" respawn="true" launch-prefix="bash -c 'sleep 10; $0 $@'" />
+</launch>
